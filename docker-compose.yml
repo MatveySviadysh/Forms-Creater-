@@ -16,7 +16,8 @@ services:
     restart: unless-stopped
 
   forms-service:
-    build: ./forms-service
+    image: matveysviadysh/survey-app-forms-service:latest
+    #build: ./forms-service
     expose:
       - "8000"
     environment:
@@ -47,7 +48,8 @@ services:
     restart: unless-stopped
 
   auth-service:
-    build: ./auth-service
+    image: matveysviadysh/survey-app-auth-service:latest
+    #build: ./auth-service
     expose:
       - "8000"
     environment:
@@ -78,7 +80,8 @@ services:
     restart: unless-stopped
 
   frontend:
-    build: ./frontend
+    image: matveysviadysh/survey-app-frontend:latest
+    #build: ./frontend
     expose:
       - "3000"
     networks:
