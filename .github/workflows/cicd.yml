@@ -3,15 +3,12 @@ name: Docker CI/CD Pipeline
 on:
   push:
     branches: [ main, develop ]
-  pull_request:
-    branches: [ main, develop ]
 
 env:
-  DOCKER_HUB_USERNAME: matveysviadysh
+  DOCKER_HUB_USERNAME: ${{ secrets.DOCKER_HUB_USERNAME }}
   FRONTEND_IMAGE: survey-app-frontend
   AUTH_SERVICE_IMAGE: survey-app-auth-service
   FORMS_SERVICE_IMAGE: survey-app-forms-service
-  VERSION: ${GITHUB_SHA:0:7}
 
 jobs:
   build-and-push:
@@ -19,6 +16,10 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Set version tag
+        id: vars
+        run: echo "VERSION=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
 
       - name: Login to Docker Hub
         uses: docker/login-action@v2
@@ -28,45 +29,21 @@ jobs:
 
       - name: Build and push frontend
         run: |
-          docker build -t $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:$VERSION ./frontend
-          docker push $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:$VERSION
-          docker tag $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:$VERSION $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:latest
+          docker build -t $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:${{ steps.vars.outputs.VERSION }} ./frontend
+          docker push $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:${{ steps.vars.outputs.VERSION }}
+          docker tag $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:${{ steps.vars.outputs.VERSION }} $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:latest
           docker push $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:latest
 
       - name: Build and push auth-service
         run: |
-          docker build -t $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:$VERSION ./auth-service
-          docker push $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:$VERSION
-          docker tag $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:$VERSION $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:latest
+          docker build -t $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:${{ steps.vars.outputs.VERSION }} ./auth-service
+          docker push $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:${{ steps.vars.outputs.VERSION }}
+          docker tag $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:${{ steps.vars.outputs.VERSION }} $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:latest
           docker push $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:latest
 
       - name: Build and push forms-service
         run: |
-          docker build -t $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:$VERSION ./forms-service
-          docker push $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:$VERSION
-          docker tag $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:$VERSION $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:latest
+          docker build -t $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:${{ steps.vars.outputs.VERSION }} ./forms-service
+          docker push $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:${{ steps.vars.outputs.VERSION }}
+          docker tag $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:${{ steps.vars.outputs.VERSION }} $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:latest
           docker push $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:latest
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Install Docker Compose
-        run: |
-          sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          sudo chmod +x /usr/local/bin/docker-compose
-
-      - name: Update docker-compose.yml with new versions
-        run: |
-          sed -i "s|image: $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE.*|image: $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:$VERSION|g" docker-compose.yml
-          sed -i "s|image: $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE.*|image: $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:$VERSION|g" docker-compose.yml
-          sed -i "s|image: $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE.*|image: $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:$VERSION|g" docker-compose.yml
-          cat docker-compose.yml
-
-      - name: Deploy to production
-        run: |
-          docker-compose down
-          docker-compose up -d
