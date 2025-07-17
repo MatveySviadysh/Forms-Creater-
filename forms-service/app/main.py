@@ -14,7 +14,7 @@ class FormCreate(BaseModel):
 class FormResponse(FormCreate):
     id: int
 
-DATABASE_URL = "postgresql://admin:1234@db_forms:5432/auth_db"
+DATABASE_URL = "postgresql://admin:1234@db_forms:5432/forms_db"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
