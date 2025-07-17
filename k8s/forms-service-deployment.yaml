@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: forms-service
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: forms-service
+  template:
+    metadata:
+      labels:
+        app: forms-service
+    spec:
+      containers:
+      - name: forms-service
+        image: matveysviadysh/survey-app-forms-service:fca05a5  # <-- замени на реальный образ
+        ports:
+        - containerPort: 8000
+        env:
+        - name: PORT
+          value: "8000"
+        - name: DATABASE_URL
+          value: "postgresql://admin:1234@db-forms:5432/forms_db"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: forms-service
+spec:
+  selector:
+    app: forms-service
+  ports:
+  - port: 8000
+    targetPort: 8000

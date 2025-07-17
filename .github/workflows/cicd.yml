@@ -71,3 +71,22 @@ jobs:
         run: |
           scp docker-compose.prod.yml user@server:/app/
           ssh user@server "cd /app && docker-compose -f docker-compose.prod.yml pull && docker-compose -f docker-compose.prod.yml up -d"
+      
+      - name: Deploy to Kubernetes
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG }}
+          COMMIT_SHA: ${{ steps.vars.outputs.COMMIT_SHA }}
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBE_CONFIG" > ~/.kube/config
+          
+          # Подстановка версий в манифесты
+          envsubst < k8s/frontend-deployment.yaml | kubectl apply -f -
+          envsubst < k8s/auth-service-deployment.yaml | kubectl apply -f -
+          kubectl apply -f k8s/nginx-configmap.yaml
+          kubectl apply -f k8s/nginx-deployment.yaml
+          kubectl apply -f k8s/db-auth-statefulset.yaml
+          
+          # Проверка статуса
+          kubectl get pods
+          kubectl get services
