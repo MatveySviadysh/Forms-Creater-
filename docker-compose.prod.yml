@@ -13,9 +13,10 @@ services:
       - frontend
     networks:
       - app-network
+    restart: unless-stopped
 
   forms-service:
-    build: ./forms-service
+    image: matveysviadysh/survey-app-forms-service:${COMMIT_SHA}
     expose:
       - "8000"
     environment:
@@ -26,6 +27,7 @@ services:
         condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   db_forms:
     image: postgres:13
@@ -42,9 +44,10 @@ services:
       retries: 5
     networks:
       - app-network
+    restart: unless-stopped
 
   auth-service:
-    build: ./auth-service
+    image: matveysviadysh/survey-app-auth-service:${COMMIT_SHA}
     expose:
       - "8000"
     environment:
@@ -55,6 +58,7 @@ services:
         condition: service_healthy
     networks:
       - app-network
+    restart: unless-stopped
 
   db_auth:
     image: postgres:13
@@ -71,13 +75,15 @@ services:
       retries: 5
     networks:
       - app-network
+    restart: unless-stopped
 
   frontend:
-    build: ./frontend
-    ports:
-      - "3000:3000"
+    image: matveysviadysh/survey-app-frontend:${COMMIT_SHA}
+    expose:
+      - "3000"
     networks:
       - app-network
+    restart: unless-stopped
 
 volumes:
   postgres_forms_data:
