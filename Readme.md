@@ -6,3 +6,5 @@ make run
 export COMMIT_SHA=fca05a5  # замените на актуальный хэш коммита
 
 docker-compose -f docker-compose.prod.yml up
+
+alembic init migrations
