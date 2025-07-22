@@ -44,7 +44,6 @@ jobs:
 
       - name: Update deployment files
         run: |
-          # Обновляем docker-compose.prod.yml с новыми тегами
           sed -i "s|image: $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE.*|image: $DOCKER_HUB_USERNAME/$FRONTEND_IMAGE:${{ steps.vars.outputs.COMMIT_SHA }}|g" docker-compose.prod.yml
           sed -i "s|image: $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE.*|image: $DOCKER_HUB_USERNAME/$AUTH_SERVICE_IMAGE:${{ steps.vars.outputs.COMMIT_SHA }}|g" docker-compose.prod.yml
           sed -i "s|image: $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE.*|image: $DOCKER_HUB_USERNAME/$FORMS_SERVICE_IMAGE:${{ steps.vars.outputs.COMMIT_SHA }}|g" docker-compose.prod.yml
@@ -80,13 +79,11 @@ jobs:
           mkdir -p ~/.kube
           echo "$KUBE_CONFIG" > ~/.kube/config
           
-          # Подстановка версий в манифесты
           envsubst < k8s/frontend-deployment.yaml | kubectl apply -f -
           envsubst < k8s/auth-service-deployment.yaml | kubectl apply -f -
           kubectl apply -f k8s/nginx-configmap.yaml
           kubectl apply -f k8s/nginx-deployment.yaml
           kubectl apply -f k8s/db-auth-statefulset.yaml
           
-          # Проверка статуса
           kubectl get pods
           kubectl get services
