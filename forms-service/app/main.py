@@ -7,6 +7,8 @@ from contextlib import asynccontextmanager
 import json
 from enum import Enum
 import logging
+from fastapi.middleware.cors import CORSMiddleware
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -49,6 +51,8 @@ class FormCreate(BaseModel):
 
 class FormResponse(FormCreate):
     id: int
+
+
 
 DATABASE_URL = "postgresql://admin:1234@db_forms:5432/forms_db"
 
@@ -112,6 +116,14 @@ app = FastAPI(
     redoc_url="/redoc",
     openapi_url="/openapi.json",
     lifespan=lifespan
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 async def get_db():
