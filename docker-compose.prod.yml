@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - forms-service
+      - auth-service
+      - frontend
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  forms-service:
+    image: matveysviadysh/survey-app-forms-service:cc0265a
+    expose:
+      - "8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://admin:1234@db_forms:5432/forms_db
+    depends_on:
+      db_forms:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  db_forms:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: forms_db
+    volumes:
+      - postgres_forms_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d forms_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  auth-service:
+    image: matveysviadysh/survey-app-auth-service:cc0265a
+    expose:
+      - "8000"
+    environment:
+      - PORT=8000
+      - DATABASE_URL=postgresql://admin:1234@db_auth:5432/auth_db
+    depends_on:
+      db_auth:
+        condition: service_healthy
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  db_auth:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: auth_db
+    volumes:
+      - postgres_auth_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d auth_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  frontend:
+    image: matveysviadysh/survey-app-frontend:cc0265a
+    expose:
+      - "3000"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+volumes:
+  postgres_forms_data:
+  postgres_auth_data:
+
+networks:
+  app-network:
+    driver: bridge

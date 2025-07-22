@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  nginx.conf: |
+    worker_processes 1;
+    events { worker_connections 1024; }
+    http {
+      upstream auth-service { server auth-service:8000; }
+      upstream forms-service { server forms-service:8000; }
+      upstream frontend { server frontend:3000; }
+      
+      server {
+        listen 80;
+        location /api/auth/ { proxy_pass http://auth-service; }
+        location /api/forms/ { proxy_pass http://forms-service; }
+        location / { proxy_pass http://frontend; }
+      }
+    }
