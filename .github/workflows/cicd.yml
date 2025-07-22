@@ -4,6 +4,9 @@ on:
   push:
     branches: [ main, develop ]
 
+permissions:
+  contents: write
+
 env:
   DOCKER_HUB_USERNAME: matveysviadysh
   FRONTEND_IMAGE: survey-app-frontend
