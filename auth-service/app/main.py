@@ -9,9 +9,9 @@ app = FastAPI(
     title="Auth Service",
     description="Authentication service API",
     version="1.0.0",
-    openapi_url="/api/auth/openapi.json",  # Explicitly set OpenAPI JSON path
-    docs_url="/api/auth/docs",            # Set docs path
-    redoc_url="/api/auth/redoc"           # Set redoc path
+    openapi_url="/api/auth/openapi.json",
+    docs_url="/api/auth/docs",
+    redoc_url="/api/auth/redoc"
 )
 
 app.add_middleware(
