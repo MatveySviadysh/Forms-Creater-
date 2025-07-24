@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './styles.module.css';
 
@@ -10,7 +10,7 @@ interface QuestionOption {
 }
 
 interface FormQuestion {
-  id: string;
+  question_id: string;
   title: string;
   type: QuestionType;
   required: boolean;
@@ -21,17 +21,49 @@ interface FormQuestion {
   max_label?: string;
 }
 
+interface Form {
+  id: number;
+  title: string;
+  description: string;
+  created_at: string;
+}
+
 const CreateForm: React.FC = () => {
   const navigate = useNavigate();
   const [formTitle, setFormTitle] = useState('');
   const [formDescription, setFormDescription] = useState('');
   const [questions, setQuestions] = useState<FormQuestion[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [forms, setForms] = useState<Form[]>([]);
+  const [showForms, setShowForms] = useState(false);
+  const [loadingForms, setLoadingForms] = useState(false);
+
+  // Загрузка всех форм
+  const fetchForms = async () => {
+    setLoadingForms(true);
+    setError(null);
+    try {
+      const response = await fetch('http://localhost/api/forms/forms/forms/');
+      if (!response.ok) {
+        throw new Error('Ошибка при загрузке форм');
+      }
+      const data = await response.json();
+      setForms(data);
+      setShowForms(!showForms);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Неизвестная ошибка');
+      console.error('Ошибка загрузки форм:', err);
+    } finally {
+      setLoadingForms(false);
+    }
+  };
 
   const addQuestion = () => {
     setQuestions([
       ...questions,
       {
-        id: Date.now().toString(),
+        question_id: Date.now().toString(),
         title: '',
         type: 'text',
         required: false,
@@ -78,49 +110,98 @@ const CreateForm: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const response = await fetch('http://localhost:8000/api/forms', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          title: formTitle,
-          description: formDescription,
-          questions: questions.map(q => ({
-            ...q,
-            // Для linear_scale добавляем дополнительные поля
-            ...(q.type === 'linear_scale' && {
-              min_value: q.min_value || 1,
-              max_value: q.max_value || 5,
-              min_label: q.min_label || 'Min',
-              max_label: q.max_label || 'Max'
-            }),
-            // Удаляем options для text типа
-            options: q.type === 'text' ? undefined : q.options
-          }))
-        })
-      });
+  e.preventDefault();
+  setIsSubmitting(true);
+  setError(null);
 
-      const data = await response.json();
-      
-      if (response.ok) {
-        alert(`Форма успешно создана! ID: ${data.id}`);
-        navigate('/');
-      } else {
-        throw new Error(data.detail || 'Ошибка при создании формы');
+  try {
+    // Подготовка данных в точном соответствии с ожидаемой структурой
+    const requestData = {
+      title: formTitle,
+      description: formDescription,
+      questions: questions.map(question => ({
+        id: question.question_id,  // Используем question_id как id
+        title: question.title,
+        type: question.type,
+        required: question.required,
+        options: question.type === 'text' ? undefined : question.options?.map(opt => ({
+          id: opt.id,
+          value: opt.value
+        })),
+        min_value: question.type === 'linear_scale' ? question.min_value : undefined,
+        max_value: question.type === 'linear_scale' ? question.max_value : undefined,
+        min_label: question.type === 'linear_scale' ? question.min_label : undefined,
+        max_label: question.type === 'linear_scale' ? question.max_label : undefined
+      }))
+    };
+
+    console.log('Отправляемые данные:', JSON.stringify(requestData, null, 2));
+
+    const response = await fetch('http://localhost/api/forms/forms/forms/', {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestData)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // Улучшенная обработка ошибок
+      let errorMessage = 'Ошибка при создании формы';
+      if (data.detail) {
+        errorMessage = typeof data.detail === 'string' 
+          ? data.detail
+          : JSON.stringify(data.detail);
       }
-    } catch (error) {
-      console.error('Ошибка:', error);
-      alert(error instanceof Error ? error.message : 'Произошла ошибка при сохранении формы');
+      throw new Error(errorMessage);
     }
-  };
+
+    alert(`Форма успешно создана! ID: ${data.id}`);
+    navigate('/');
+  } catch (error) {
+    console.error('Ошибка:', error);
+    setError(error instanceof Error ? error.message : 'Неизвестная ошибка');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className={styles.container}>
       <h1>Создание новой формы</h1>
       
+      <button 
+        onClick={fetchForms}
+        className={styles.showFormsButton}
+        disabled={loadingForms}
+      >
+        {loadingForms ? 'Загрузка...' : (showForms ? 'Скрыть формы' : 'Показать все формы')}
+      </button>
+
+      {showForms && (
+        <div className={styles.formsList}>
+          <h2>Мои формы</h2>
+          {forms.length === 0 ? (
+            <p>Нет созданных форм</p>
+          ) : (
+            <ul>
+              {forms.map(form => (
+                <li key={form.id} className={styles.formItem}>
+                  <h3>{form.title}</h3>
+                  <p>{form.description}</p>
+                  <small>Создано: {new Date(form.created_at).toLocaleString()}</small>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {error && <div className={styles.error}>{error}</div>}
+
       <form onSubmit={handleSubmit}>
         <div className={styles.formGroup}>
           <label>Название формы:</label>
@@ -129,6 +210,7 @@ const CreateForm: React.FC = () => {
             value={formTitle}
             onChange={(e) => setFormTitle(e.target.value)}
             required
+            disabled={isSubmitting}
           />
         </div>
 
@@ -137,12 +219,13 @@ const CreateForm: React.FC = () => {
           <textarea
             value={formDescription}
             onChange={(e) => setFormDescription(e.target.value)}
+            disabled={isSubmitting}
           />
         </div>
 
         <div className={styles.questions}>
           {questions.map((question, qIndex) => (
-            <div key={question.id} className={styles.question}>
+            <div key={question.question_id} className={styles.question}>
               <h3>Вопрос {qIndex + 1}</h3>
               
               <div className={styles.formGroup}>
@@ -152,6 +235,7 @@ const CreateForm: React.FC = () => {
                   value={question.title}
                   onChange={(e) => updateQuestion(qIndex, 'title', e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
               
@@ -160,6 +244,7 @@ const CreateForm: React.FC = () => {
                 <select
                   value={question.type}
                   onChange={(e) => updateQuestion(qIndex, 'type', e.target.value as QuestionType)}
+                  disabled={isSubmitting}
                 >
                   <option value="text">Текстовый ответ</option>
                   <option value="radio">Один вариант</option>
@@ -175,6 +260,7 @@ const CreateForm: React.FC = () => {
                     type="checkbox"
                     checked={question.required}
                     onChange={(e) => updateQuestion(qIndex, 'required', e.target.checked)}
+                    disabled={isSubmitting}
                   />
                   Обязательный вопрос
                 </label>
@@ -188,6 +274,7 @@ const CreateForm: React.FC = () => {
                       type="number"
                       value={question.min_value || 1}
                       onChange={(e) => updateQuestion(qIndex, 'min_value', parseInt(e.target.value))}
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -196,6 +283,7 @@ const CreateForm: React.FC = () => {
                       type="number"
                       value={question.max_value || 5}
                       onChange={(e) => updateQuestion(qIndex, 'max_value', parseInt(e.target.value))}
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -204,6 +292,7 @@ const CreateForm: React.FC = () => {
                       type="text"
                       value={question.min_label || ''}
                       onChange={(e) => updateQuestion(qIndex, 'min_label', e.target.value)}
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className={styles.formGroup}>
@@ -212,6 +301,7 @@ const CreateForm: React.FC = () => {
                       type="text"
                       value={question.max_label || ''}
                       onChange={(e) => updateQuestion(qIndex, 'max_label', e.target.value)}
+                      disabled={isSubmitting}
                     />
                   </div>
                 </>
@@ -227,11 +317,13 @@ const CreateForm: React.FC = () => {
                         value={option.value}
                         onChange={(e) => updateOption(qIndex, oIndex, e.target.value)}
                         placeholder="Текст варианта"
+                        disabled={isSubmitting}
                       />
                       <button
                         type="button"
                         onClick={() => removeOption(qIndex, oIndex)}
                         className={styles.removeButton}
+                        disabled={isSubmitting}
                       >
                         ×
                       </button>
@@ -241,6 +333,7 @@ const CreateForm: React.FC = () => {
                     type="button"
                     onClick={() => addOption(qIndex)}
                     className={styles.addButton}
+                    disabled={isSubmitting}
                   >
                     + Добавить вариант
                   </button>
@@ -251,6 +344,7 @@ const CreateForm: React.FC = () => {
                 type="button"
                 onClick={() => removeQuestion(qIndex)}
                 className={styles.removeQuestionButton}
+                disabled={isSubmitting}
               >
                 Удалить вопрос
               </button>
@@ -259,11 +353,20 @@ const CreateForm: React.FC = () => {
         </div>
 
         <div className={styles.buttons}>
-          <button type="button" onClick={addQuestion} className={styles.addButton}>
+          <button 
+            type="button" 
+            onClick={addQuestion} 
+            className={styles.addButton}
+            disabled={isSubmitting}
+          >
             Добавить вопрос
           </button>
-          <button type="submit" className={styles.submitButton}>
-            Сохранить форму
+          <button 
+            type="submit" 
+            className={styles.submitButton}
+            disabled={isSubmitting || questions.length === 0}
+          >
+            {isSubmitting ? 'Сохранение...' : 'Сохранить форму'}
           </button>
         </div>
       </form>

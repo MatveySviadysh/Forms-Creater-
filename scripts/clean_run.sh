@@ -1,1 +1,1 @@
-docker-compose down && docker-compose up --build
+docker-compose --env-file .env down && docker-compose --env-file .env up --build

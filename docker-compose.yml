@@ -4,7 +4,7 @@ services:
   nginx:
     image: nginx:alpine
     ports:
-      - "80:80"
+      - "${NGINX_PORT}:80"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
@@ -12,72 +12,72 @@ services:
       - auth-service
       - frontend
     networks:
-      - app-network
+      - ${APP_NETWORK}
 
   forms-service:
     build: ./forms-service
     expose:
-      - "8000"
+      - "${FORMS_SERVICE_PORT}"
     environment:
-      - PORT=8000
-      - DATABASE_URL=postgresql://admin:1234@db_forms:5432/forms_db
+      - PORT=${FORMS_SERVICE_PORT}
+      - DATABASE_URL=postgresql://${FORMS_DB_USER}:${FORMS_DB_PASSWORD}@${FORMS_DB_HOST}:${FORMS_DB_PORT}/${FORMS_DB_NAME}
     depends_on:
       db_forms:
         condition: service_healthy
     networks:
-      - app-network
+      - ${APP_NETWORK}
 
   db_forms:
     image: postgres:13
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 1234
-      POSTGRES_DB: forms_db
+      POSTGRES_USER: ${FORMS_DB_USER}
+      POSTGRES_PASSWORD: ${FORMS_DB_PASSWORD}
+      POSTGRES_DB: ${FORMS_DB_NAME}
     volumes:
       - postgres_forms_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d forms_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${FORMS_DB_USER} -d ${FORMS_DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - app-network
+      - ${APP_NETWORK}
 
   auth-service:
     build: ./auth-service
     expose:
-      - "8000"
+      - "${AUTH_SERVICE_PORT}"
     environment:
-      - PORT=8000
-      - DATABASE_URL=postgresql://admin:1234@db_auth:5432/auth_db
+      - PORT=${AUTH_SERVICE_PORT}
+      - DATABASE_URL=postgresql://${AUTH_DB_USER}:${AUTH_DB_PASSWORD}@${AUTH_DB_HOST}:${AUTH_DB_PORT}/${AUTH_DB_NAME}
     depends_on:
       db_auth:
         condition: service_healthy
     networks:
-      - app-network
+      - ${APP_NETWORK}
 
   db_auth:
     image: postgres:13
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: 1234
-      POSTGRES_DB: auth_db
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+      POSTGRES_DB: ${AUTH_DB_NAME}
     volumes:
       - postgres_auth_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d auth_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
-      - app-network
+      - ${APP_NETWORK}
 
   frontend:
     build: ./frontend
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT}:3000"
     networks:
-      - app-network
+      - ${APP_NETWORK}
 
 volumes:
   postgres_forms_data:
