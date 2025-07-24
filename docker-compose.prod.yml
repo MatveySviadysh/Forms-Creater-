@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
 
   forms-service:
-    image: matveysviadysh/survey-app-forms-service:${COMMIT_SHA}
+    image: matveysviadysh/survey-app-forms-service:cc0265a
     expose:
       - "8000"
     environment:
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
   auth-service:
-    image: matveysviadysh/survey-app-auth-service:${COMMIT_SHA}
+    image: matveysviadysh/survey-app-auth-service:cc0265a
     expose:
       - "8000"
     environment:
@@ -78,7 +78,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: matveysviadysh/survey-app-frontend:${COMMIT_SHA}
+    image: matveysviadysh/survey-app-frontend:cc0265a
     expose:
       - "3000"
     networks:
