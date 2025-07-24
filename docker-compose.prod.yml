@@ -16,7 +16,7 @@ services:
     restart: unless-stopped
 
   forms-service:
-    image: matveysviadysh/survey-app-forms-service:dcbc5e5
+    image: matveysviadysh/survey-app-forms-service:d56c4cd
     expose:
       - "8000"
     environment:
@@ -47,7 +47,7 @@ services:
     restart: unless-stopped
 
   auth-service:
-    image: matveysviadysh/survey-app-auth-service:dcbc5e5
+    image: matveysviadysh/survey-app-auth-service:d56c4cd
     expose:
       - "8000"
     environment:
@@ -78,7 +78,7 @@ services:
     restart: unless-stopped
 
   frontend:
-    image: matveysviadysh/survey-app-frontend:dcbc5e5
+    image: matveysviadysh/survey-app-frontend:d56c4cd
     expose:
       - "3000"
     networks:
